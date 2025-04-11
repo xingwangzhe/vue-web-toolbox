@@ -564,38 +564,184 @@ function findClosingBracket(bytes: Uint8Array): boolean {
   return bytesToString(bytes.slice(0, 100)).includes(']');
 }
 
-// 根据字节内容粗略判断是否可能为文本
+// 根据字节内容判断是否可能为文本
 function isTextLike(bytes: Uint8Array): boolean {
-  // 检查前100个字节，如果大部分在可打印ASCII范围内则可能是文本
-  const checkLength = Math.min(100, bytes.length);
-  let textCharCount = 0;
+  // 检查是否含有BOM标记
+  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+    return true; // UTF-8 BOM
+  }
+  if (bytes.length >= 2 &&
+    ((bytes[0] === 0xFE && bytes[1] === 0xFF) || (bytes[0] === 0xFF && bytes[1] === 0xFE))) {
+    return true; // UTF-16 BOM
+  }
 
+  // 检测是否为有效的UTF-8编码
+  if (isValidUTF8(bytes)) {
+    return true;
+  }
+
+  // 检查统计特征
+  const checkLength = Math.min(500, bytes.length); // 增加检查长度以提高准确性
+  let textCharCount = 0;
+  let controlCharCount = 0;
+  let binaryCharCount = 0;
+  let nullByteCount = 0;
+
+  // 统计不同类型字符的数量
   for (let i = 0; i < checkLength; i++) {
     const byte = bytes[i];
-    // ASCII 可见字符范围大致是 32-126，加上一些常见控制字符
-    if ((byte >= 32 && byte <= 126) || byte === 9 || byte === 10 || byte === 13) {
+    // ASCII 可见字符
+    if (byte >= 32 && byte <= 126) {
       textCharCount++;
+    }
+    // 常见控制字符 (tab, LF, CR, etc)
+    else if (byte === 9 || byte === 10 || byte === 13) {
+      controlCharCount++;
+    }
+    // 空字节
+    else if (byte === 0) {
+      nullByteCount++;
+    }
+    // 其他非文本字节
+    else if (byte < 9 || (byte > 13 && byte < 32) || byte > 126) {
+      binaryCharCount++;
     }
   }
 
-  // 如果超过80%的字符是可打印的，可能是文本
-  return textCharCount / checkLength > 0.8;
+  // 文本特征判断条件
+  // 1. 至少有30%是可见字符
+  const textRatio = textCharCount / checkLength;
+  // 2. 二进制字符比例不应太高
+  const binaryRatio = binaryCharCount / checkLength;
+  // 3. 空字节比例不应太高(可能是二进制文件)
+  const nullRatio = nullByteCount / checkLength;
+
+  // 判断为文本的条件组合
+  return (textRatio > 0.3) && (binaryRatio < 0.3) && (nullRatio < 0.2);
+}
+
+// 检查是否是有效的UTF-8编码
+function isValidUTF8(bytes: Uint8Array): boolean {
+  // 简单的UTF-8验证：检查多字节字符结构是否符合UTF-8编码规则
+  let i = 0;
+  const len = Math.min(bytes.length, 500); // 限制检查长度
+  let validSequences = 0;
+  let invalidSequences = 0;
+
+  while (i < len) {
+    // 单字节ASCII (0xxxxxxx)
+    if ((bytes[i] & 0x80) === 0) {
+      i += 1;
+    }
+    // 2字节序列 (110xxxxx 10xxxxxx)
+    else if ((bytes[i] & 0xE0) === 0xC0) {
+      if (i + 1 < len && (bytes[i + 1] & 0xC0) === 0x80) {
+        validSequences++;
+        i += 2;
+      } else {
+        invalidSequences++;
+        i += 1;
+      }
+    }
+    // 3字节序列 (1110xxxx 10xxxxxx 10xxxxxx)
+    else if ((bytes[i] & 0xF0) === 0xE0) {
+      if (i + 2 < len && (bytes[i + 1] & 0xC0) === 0x80 && (bytes[i + 2] & 0xC0) === 0x80) {
+        validSequences++;
+        i += 3;
+      } else {
+        invalidSequences++;
+        i += 1;
+      }
+    }
+    // 4字节序列 (11110xxx 10xxxxxx 10xxxxxx 10xxxxxx)
+    else if ((bytes[i] & 0xF8) === 0xF0) {
+      if (i + 3 < len && (bytes[i + 1] & 0xC0) === 0x80 &&
+        (bytes[i + 2] & 0xC0) === 0x80 && (bytes[i + 3] & 0xC0) === 0x80) {
+        validSequences++;
+        i += 4;
+      } else {
+        invalidSequences++;
+        i += 1;
+      }
+    } else {
+      // 无效的UTF-8起始字节
+      invalidSequences++;
+      i += 1;
+    }
+  }
+
+  // 如果有足够多的有效多字节序列，且无效序列比例低，认为是UTF-8
+  return validSequences > 0 && (invalidSequences / (validSequences + invalidSequences)) < 0.2;
 }
 
 // 根据MIME类型获取文件扩展名
 function getFileExtension(): string {
   const mimeToExt: Record<string, string> = {
+    // 图片格式
     'image/jpeg': 'jpg',
     'image/png': 'png',
     'image/gif': 'gif',
+    'image/webp': 'webp',
+    'image/bmp': 'bmp',
+    'image/tiff': 'tiff',
+    'image/x-icon': 'ico',
+    'image/svg+xml': 'svg',
+
+    // 文档格式
     'application/pdf': 'pdf',
+    'application/msword': 'doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/vnd.ms-excel': 'xls',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+    'application/vnd.ms-powerpoint': 'ppt',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+
+    // 压缩文件
     'application/zip': 'zip',
+    'application/x-rar-compressed': 'rar',
+    'application/gzip': 'gz',
+    'application/x-bzip': 'bz2',
+    'application/x-7z-compressed': '7z',
+    'application/x-tar': 'tar',
+
+    // 可执行文件
+    'application/x-msdownload': 'exe',
+    'application/x-elf': 'elf',
+
+    // 音频视频
+    'audio/mp3': 'mp3',
+    'audio/mpeg': 'mp3',
+    'audio/wav': 'wav',
+    'audio/ogg': 'ogg',
+    'video/mp4': 'mp4',
+    'video/webm': 'webm',
+    'application/ogg': 'ogg',
+    'video/x-msvideo': 'avi',
+    'video/x-flv': 'flv',
+    'video/quicktime': 'mov',
+
+    // 文本和编程语言
     'text/plain': 'txt',
     'text/html': 'html',
-    'application/json': 'json'
+    'text/css': 'css',
+    'application/javascript': 'js',
+    'application/json': 'json',
+    'application/xml': 'xml',
+    'text/csv': 'csv',
+    'text/markdown': 'md',
+
+    // 字体
+    'font/ttf': 'ttf',
+    'font/otf': 'otf',
+    'font/woff': 'woff',
+    'font/woff2': 'woff2'
   };
 
-  return mimeToExt[detectMimeType.value] || 'bin';
+  // 检查MIME类型是否包含编码信息（例如 text/plain; charset=utf-8）
+  const mimeBase = detectMimeType.value.split(';')[0].trim();
+
+  // 尝试从映射表中获取扩展名，如果不存在则使用默认值
+  return mimeToExt[mimeBase] || (mimeBase.startsWith('text/') ? 'txt' : 'bin');
 }
 
 // 复制到剪贴板
