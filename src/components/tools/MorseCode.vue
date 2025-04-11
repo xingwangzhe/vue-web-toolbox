@@ -120,7 +120,7 @@ const textResult = ref('');
 const copyMessage = ref('');
 
 // 摩尔斯码映射表
-const morseCodeMap = {
+const morseCodeMap: { [key: string]: string } = {
   'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
   'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
   'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
