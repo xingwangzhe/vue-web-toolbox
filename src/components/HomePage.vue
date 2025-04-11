@@ -1,72 +1,67 @@
 <template>
   <div class="home-container">
-    <el-card class="search-box" :body-style="{ padding: '20px' }">
-      <el-input v-model="searchText" placeholder="搜索工具..." clearable class="search-input">
-        <template #prefix>
-          <font-awesome-icon :icon="['fas', 'search']" size="sm" />
-        </template>
-      </el-input>
-    </el-card>
+    <div class="search-box">
+      <div class="search-input-container">
+        <input v-model="searchText" placeholder="搜索工具..." class="search-input" />
+        <span class="search-icon">🔍</span>
+      </div>
+    </div>
 
-    <el-divider>
-      <el-text class="tools-title" size="large">常用工具</el-text>
-    </el-divider>
+    <div class="divider">
+      <span class="tools-title">常用工具</span>
+    </div>
 
-    <el-row :gutter="20">
-      <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="tool in filteredTools" :key="tool.id">
-        <el-card class="tool-card" @click="navigateTo(tool.path)" shadow="hover" :body-style="{ padding: '20px' }">
-          <div class="tool-icon">
-            <font-awesome-icon :icon="tool.icon" size="lg" />
-          </div>
-          <div class="tool-info">
-            <h3>{{ tool.name }}</h3>
-            <p>{{ tool.description }}</p>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <div class="tools-grid">
+      <div v-for="tool in filteredTools" :key="tool.id" class="tool-card" @click="navigateTo(tool.path)">
+        <div class="tool-icon">
+          <span class="icon">{{ getIconText(tool.name) }}</span>
+        </div>
+        <div class="tool-info">
+          <h3>{{ tool.name }}</h3>
+          <p>{{ tool.description }}</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
 
 const router = useRouter();
 const searchText = ref('');
 
-// 根据工具名称智能匹配图标
-const getIconForTool = (name: string): [string, string] => {
+// 获取工具的图标文字（简单的替代方案）
+const getIconText = (name: string): string => {
   const toolNameLower = name.toLowerCase();
 
-  // 定义工具名称到图标的映射关系 - 使用 Font Awesome 图标
-  const iconMapping: Record<string, [string, string]> = {
-    'base64': ['fas', 'file-code'],
-    'morse': ['fas', 'wave-square'],
-    'url': ['fas', 'link'],
-    'json': ['fas', 'code'],
-    'qrcode': ['fas', 'qrcode'],
-    'md5': ['fas', 'lock'],
-    'uuid': ['fas', 'key'],
-    'timestamp': ['far', 'clock'],
-    'color': ['fas', 'palette'],
-    'image': ['far', 'image'],
-    'text': ['fas', 'font'],
-    'regex': ['fas', 'magnifying-glass'],
-    'jwt': ['fas', 'id-badge'],
-    'hash': ['fas', 'hashtag']
+  const iconMap: Record<string, string> = {
+    'base64': '🔤',
+    'morse': '📻',
+    'url': '🔗',
+    'json': '📋',
+    'qrcode': '📱',
+    'md5': '🔒',
+    'uuid': '🔑',
+    'timestamp': '⏱️',
+    'color': '🎨',
+    'image': '🖼️',
+    'text': '📝',
+    'regex': '🔍',
+    'jwt': '🎫',
+    'hash': '📊'
   };
 
-  // 尝试直接匹配
-  for (const key in iconMapping) {
+  // 尝试匹配
+  for (const key in iconMap) {
     if (toolNameLower.includes(key)) {
-      return iconMapping[key];
+      return iconMap[key];
     }
   }
 
   // 默认图标
-  return ['fas', 'wrench'];
+  return '🛠️';
 };
 
 // 工具列表配置
@@ -83,7 +78,6 @@ const tools = ref(
       id: index + 1,
       name: displayName,
       description,
-      icon: getIconForTool(displayName),
       path: `/${displayName.toLowerCase()}`,
       component: name
     };
@@ -102,10 +96,7 @@ const filteredTools = computed(() => {
 
 const navigateTo = (path: string) => {
   router.push(path).catch(() => {
-    ElMessage({
-      message: '该功能正在开发中...',
-      type: 'info'
-    });
+    alert('该功能正在开发中...');
   });
 };
 </script>
@@ -121,22 +112,81 @@ const navigateTo = (path: string) => {
 .search-box {
   margin-bottom: 30px;
   border-radius: 8px;
-  transition: all 0.3s;
+  padding: 20px;
+  background-color: var(--bg-color);
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.search-input-container {
+  position: relative;
+  width: 100%;
 }
 
 .search-input {
   width: 100%;
+  padding: 10px 15px 10px 40px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-color);
+  color: var(--text-color-primary);
+  font-size: 16px;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-color-secondary);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 30px 0;
+  color: var(--text-color-secondary);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border-color);
+}
+
+.divider::before {
+  margin-right: 20px;
+}
+
+.divider::after {
+  margin-left: 20px;
 }
 
 .tools-title {
   font-size: 24px;
   font-weight: 600;
-  color: var(--el-text-color-primary);
+  color: var(--text-color-primary);
+  white-space: nowrap;
+}
+
+/* 工具网格 */
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
 }
 
 /* 工具卡片 */
 .tool-card {
   height: 180px;
+  padding: 20px;
   margin-bottom: 20px;
   transition: all 0.3s;
   border-radius: 8px;
@@ -144,11 +194,15 @@ const navigateTo = (path: string) => {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  background-color: var(--bg-color);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
 .tool-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 16px rgba(var(--el-color-primary-rgb), 0.2);
+  box-shadow: 0 4px 16px rgba(64, 158, 255, 0.2);
+  border-color: var(--color-primary);
 }
 
 /* 图标样式 */
@@ -160,10 +214,14 @@ const navigateTo = (path: string) => {
   height: 52px;
   margin: 0 auto 15px;
   border-radius: 50%;
-  background: linear-gradient(145deg, rgba(var(--el-color-primary-rgb), 0.7), rgba(var(--el-color-primary-rgb), 0.4));
-  box-shadow: 0 4px 8px rgba(var(--el-color-primary-rgb), 0.2);
-  color: var(--el-color-white);
+  background: linear-gradient(145deg, rgba(64, 158, 255, 0.7), rgba(64, 158, 255, 0.4));
+  box-shadow: 0 4px 8px rgba(64, 158, 255, 0.2);
+  color: white;
   transition: all 0.3s;
+}
+
+.icon {
+  font-size: 24px;
 }
 
 /* 工具信息 */
@@ -177,14 +235,14 @@ const navigateTo = (path: string) => {
 .tool-info h3 {
   margin: 0 0 10px;
   font-size: 18px;
-  color: var(--el-text-color-primary);
+  color: var(--text-color-primary);
   transition: all 0.3s;
 }
 
 .tool-info p {
   margin: 0;
   font-size: 14px;
-  color: var(--el-text-color-secondary);
+  color: var(--text-color-secondary);
   line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -194,6 +252,7 @@ const navigateTo = (path: string) => {
   transition: all 0.3s;
 }
 
+/* 响应式设计 */
 /* 大屏幕 (≥1200px) */
 @media screen and (min-width: 1200px) {
   .home-container {
@@ -234,22 +293,22 @@ const navigateTo = (path: string) => {
   .tools-title {
     font-size: 20px;
   }
-
+  
   .tool-card {
     height: 160px;
   }
-
+  
   .tool-icon {
     width: 45px;
     height: 45px;
     margin-bottom: 12px;
   }
-
+  
   .tool-info h3 {
     font-size: 16px;
     margin-bottom: 8px;
   }
-
+  
   .tool-info p {
     font-size: 13px;
     -webkit-line-clamp: 2;
@@ -261,35 +320,40 @@ const navigateTo = (path: string) => {
   .home-container {
     padding: 12px;
   }
-
+  
   .search-box {
     margin-bottom: 20px;
+    padding: 15px;
   }
-
+  
   .tools-title {
     font-size: 18px;
   }
-
+  
+  .tools-grid {
+    grid-template-columns: 1fr;
+  }
+  
   .tool-card {
     height: 150px;
     margin-bottom: 15px;
   }
-
+  
   .tool-icon {
     width: 40px;
     height: 40px;
     margin-bottom: 10px;
   }
-
-  .tool-icon svg {
-    font-size: 16px;
+  
+  .icon {
+    font-size: 20px;
   }
-
+  
   .tool-info h3 {
     font-size: 15px;
     margin-bottom: 6px;
   }
-
+  
   .tool-info p {
     font-size: 12px;
     -webkit-line-clamp: 2;
@@ -301,25 +365,31 @@ const navigateTo = (path: string) => {
   .home-container {
     padding: 10px;
   }
-
+  
   .search-box {
     margin-bottom: 15px;
+    padding: 10px;
   }
-
+  
   .tool-card {
     height: 140px;
     margin-bottom: 12px;
+    padding: 15px;
   }
-
+  
   .tool-icon {
     width: 36px;
     height: 36px;
   }
-
+  
+  .icon {
+    font-size: 18px;
+  }
+  
   .tool-info h3 {
     font-size: 14px;
   }
-
+  
   .tool-info p {
     font-size: 11px;
     -webkit-line-clamp: 2;

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { RouterView, useRouter } from 'vue-router';
 
 const router = useRouter();
 const activeIndex = ref('home');
+const isDarkMode = ref(true); // 默认使用暗色模式
+const isMenuActive = ref(false); // 移动端菜单状态
 
 // 获取路由列表（排除首页）
 const routes = computed(() => {
@@ -16,88 +18,70 @@ const routes = computed(() => {
     }));
 });
 
-const handleSelect = (key: string) => {
-  router.push(key);
+// 切换路由
+const handleSelect = (path: string) => {
+  router.push(path);
+  isMenuActive.value = false; // 关闭移动菜单
+};
+
+// 切换暗色/亮色模式
+const toggleDarkMode = () => {
+  isDarkMode.value = !isDarkMode.value;
+  if (isDarkMode.value) {
+    document.documentElement.classList.add('dark');
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+  // 保存用户偏好
+  localStorage.setItem('darkMode', isDarkMode.value ? 'true' : 'false');
+};
+
+// 切换移动菜单
+const toggleMenu = () => {
+  isMenuActive.value = !isMenuActive.value;
 };
 
 onMounted(() => {
   // 设置初始激活菜单
   const currentPath = router.currentRoute.value.path;
   activeIndex.value = currentPath;
+
+  // 从本地存储中恢复暗色模式设置
+  const savedDarkMode = localStorage.getItem('darkMode');
+  if (savedDarkMode !== null) {
+    isDarkMode.value = savedDarkMode === 'true';
+    if (isDarkMode.value) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }
+});
+
+// 路由变化时更新激活菜单
+watch(() => router.currentRoute.value.path, (newPath) => {
+  activeIndex.value = newPath;
 });
 </script>
 
 <template>
-  <div class="common-layout">
-    <el-config-provider namespace="ep">
-      <el-container class="container">
-        <el-header class="header">
-          <div class="logo">HelpStack</div>
-          <el-menu :default-active="activeIndex" class="menu" mode="horizontal" @select="handleSelect">
-            <el-menu-item index="/">首页</el-menu-item>
-            <el-menu-item v-for="route in routes" :key="route.path" :index="route.path">
-              {{ route.displayName }}
-            </el-menu-item>
-          </el-menu>
-        </el-header>
 
-        <el-main class="main">
-          <RouterView />
-        </el-main>
+  <main class="section main-content">
+    <div class="container">
+      <transition name="fade" mode="out-in">
+        <RouterView />
+      </transition>
+    </div>
+  </main>
 
-        <el-footer class="footer">
-          <p>©2025-{{ new Date().getFullYear() }} HelpStack - Web工具箱</p>
-        </el-footer>
-      </el-container>
-    </el-config-provider>
+  <footer class="footer">
+
+  </footer>
   </div>
 </template>
 
-<style>
-/* 全局暗色模式变量 */
-html.dark {
-  --el-bg-color: #1d1e1f;
-  --el-bg-color-page: #0a0a0a;
-  --el-text-color-primary: #E5EAF3;
-  --el-text-color-regular: #CFD3DC;
-}
-</style>
-
-<style scoped>
-.container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  height: 60px;
-  border-bottom: 1px solid var(--el-border-color);
-}
-
-.logo {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--el-color-primary);
-}
-
-.menu {
-  border-bottom: none;
-}
-
-.main {
-  flex: 1;
-  padding: 20px;
-}
-
-.footer {
-  text-align: center;
-  padding: 20px;
-  border-top: 1px solid var(--el-border-color);
-  color: var(--el-text-color-secondary);
-}
-</style>
+<style></style>
