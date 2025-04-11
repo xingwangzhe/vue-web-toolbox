@@ -68,24 +68,74 @@ watch(() => router.currentRoute.value.path, (newPath) => {
 });
 </script>
 <template>
-  <header class="">
-    <div class="flex flex-col items-center justify-center">
-      <a class="text-indigo-600 text-5xl text-center block" href="https://tools.needhelp.icu">Needhelp.ICU-工具栈</a>
-      <br />
-      <div class="text-indigo-500 italic">只为便捷</div>
-    </div>
-  </header>
-  <main>
-    <div>
-      <transition name="fade" mode="out-in">
-        <RouterView />
-      </transition>
-    </div>
-  </main>
+  <div class="app-container">
+    <header class="">
+      <div class="flex flex-col items-center justify-center p-4">
+        <a class="text-blue-600 text-5xl text-center block backdrop-blur-md"
+          href="https://tools.needhelp.icu">Needhelp.ICU-工具栈</a>
+        <br />
+        <div class=" text-blue-500 italic backdrop-blur-md">只为便捷</div>
+      </div>
+    </header>
+    <main>
+      <div>
+        <transition name="fade" mode="out-in">
+          <RouterView />
+        </transition>
+      </div>
+    </main>
 
-  <footer class="footer">
+    <footer class="footer">
 
-  </footer>
+    </footer>
+  </div>
 </template>
 
-<style></style>
+<style>
+.app-container {
+  min-height: 100vh;
+  position: relative;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* 设置SVG背景平铺 */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('@/assets/phone.svg');
+  background-repeat: repeat;
+  /* 设置背景平铺 */
+  background-size: 300px auto;
+  /* 调整SVG的大小，可以根据需要修改 */
+  opacity: 0.5;
+  /* 调整透明度，使内容更易读 */
+  z-index: -1;
+}
+
+/* 暗色模式下的背景调整 */
+:root.dark body::before {
+  opacity: 0.5;
+  /* 暗色模式下背景更透明 */
+  filter: invert(1);
+  /* 暗色模式下反转颜色 */
+}
+
+/* 淡入淡出动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
