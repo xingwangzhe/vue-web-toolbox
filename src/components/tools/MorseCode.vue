@@ -152,7 +152,7 @@ function convertToMorse() {
   morseResult.value = encodeInput.value
     .toUpperCase()
     .split('')
-    .map(char => morseCodeMap[char] || char)
+    .map(char => morseCodeMap[char] || char || '')
     .join(' ');
 }
 
