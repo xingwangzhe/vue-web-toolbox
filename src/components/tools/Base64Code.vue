@@ -16,6 +16,12 @@
           ]">
             解码 (Base64 → 数据)
           </button>
+          <button @click="activeTab = 'charTable'" :class="[
+            'py-2 px-4 focus:outline-none',
+            activeTab === 'charTable' ? 'text-blue-400 border-b-2 border-blue-400 font-medium' : 'text-gray-300'
+          ]">
+            Base64码表
+          </button>
         </div>
 
         <!-- 编码部分：将文件/文本编码成Base64 -->
@@ -153,6 +159,38 @@
             {{ decodeError }}
           </div>
         </div>
+
+        <!-- Base64码表部分 -->
+        <div v-if="activeTab === 'charTable'" class="space-y-4">
+          <div class="font-medium text-blue-400 mb-2 text-lg">Base64码表：</div>
+
+          <!-- Base64码表说明 -->
+          <div class="text-blue-300 mb-4">
+            <p>Base64 编码使用以下 64 个字符：A-Z, a-z, 0-9, +, /</p>
+            <p>等号 (=) 用于填充，确保编码结果的长度是 4 的倍数</p>
+          </div>
+
+          <!-- Base64码表网格 -->
+          <div class="grid grid-cols-8 gap-2 text-sm text-blue-300">
+            <div v-for="(char, index) in base64Chars" :key="index"
+              class="p-1 border border-indigo-700 rounded bg-neutral-800 flex justify-between">
+              <span class="font-bold">{{ char }}</span>
+              <span>{{ index }}</span>
+            </div>
+          </div>
+
+          <!-- Base64编码原理简介 -->
+          <div class="mt-4 p-3 border border-indigo-700 rounded-md bg-neutral-800 text-blue-300">
+            <h3 class="font-medium text-blue-400 mb-2">Base64 编码原理：</h3>
+            <ol class="list-decimal list-inside space-y-1">
+              <li>将二进制数据以 3 字节为一组</li>
+              <li>每组 3 字节共 24 位，划分为 4 个 6 位的块</li>
+              <li>每个 6 位块转换为 0-63 的十进制数</li>
+              <li>按照上方码表，将十进制数映射为对应的 Base64 字符</li>
+              <li>如果最后一组不足 3 字节，用 0 补足，并在末尾添加 = 号填充</li>
+            </ol>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -194,6 +232,9 @@ const decodeError = ref('');
 
 // 通用
 const copyMessage = ref('');
+
+// Base64码表字符
+const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'.split('');
 
 // 处理文本输入
 function handleTextInput() {
