@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/components/HomePage.vue'
 import type { RouteRecordRaw } from 'vue-router'
-
+import { tools_information } from './config'
 // 自动导入工具组件
 const toolModules = import.meta.glob('../components/tools/*.vue')
 
@@ -9,7 +9,7 @@ const toolModules = import.meta.glob('../components/tools/*.vue')
 const toolRoutes: RouteRecordRaw[] = Object.keys(toolModules).map(path => {
   const name = path.match(/\/([^/]+)\.vue$/)?.[1].toLowerCase() ?? ''
   return {
-    path: `/${name.toLowerCase().replace('code', '')}`,
+    path: `/${name.toLowerCase()}`,
     name,
     component: toolModules[path]
   }

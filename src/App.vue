@@ -67,11 +67,16 @@ watch(() => router.currentRoute.value.path, (newPath) => {
   activeIndex.value = newPath;
 });
 </script>
-
 <template>
-
-  <main class="section main-content">
-    <div class="container">
+  <header class="">
+    <div class="flex flex-col items-center justify-center">
+      <a class="text-indigo-600 text-5xl text-center block" href="https://tools.needhelp.icu">Needhelp.ICU-工具栈</a>
+      <br />
+      <div class="text-indigo-500 italic">只为便捷</div>
+    </div>
+  </header>
+  <main>
+    <div>
       <transition name="fade" mode="out-in">
         <RouterView />
       </transition>
@@ -81,7 +86,6 @@ watch(() => router.currentRoute.value.path, (newPath) => {
   <footer class="footer">
 
   </footer>
-  </div>
 </template>
 
 <style></style>
