@@ -1,11 +1,11 @@
 /**
  * 哈基米编码 - 编码工具
- * 使用"哈基米"三个汉字编码二进制数据
- * 统一使用UTF-8编码
+ * 使用"哈基米汪人胖宝牢"八个汉字编码二进制数据
+ * 统一使用UTF-8编码，进行高效压缩
  */
 
-// 编码字符集："哈"，"基"，"米"
-const HAJIMI_CHARS = ['哈', '基', '米'];
+// 扩展编码字符集："哈"，"基"，"米"，"汪"，"人"，"胖"，"宝"，"牢"
+const HAJIMI_CHARS = ['哈', '基', '米', '汪', '人', '胖', '宝', '牢'];
 
 /**
  * 将二进制数据编码为哈基米编码
@@ -13,17 +13,32 @@ const HAJIMI_CHARS = ['哈', '基', '米'];
  * @returns 哈基米编码字符串
  */
 export function encodeToHajimi(data: Uint8Array): string {
-  // 优化：使用更直接的方式将二进制数据转换为三进制表示
+  // 优化：使用八进制表示字节数据，每个字节需要3个字符（8^3=512，足够表示0-255）
   const resultArray: string[] = [];
 
-  // 处理每个字节
+  // 将每个字节转换为八进制并映射到对应字符
   for (let i = 0; i < data.length; i++) {
-    // 将字节值转换为三进制字符串，使用padStart确保长度为8位
-    const ternaryStr = data[i].toString(3).padStart(8, '0');
+    const byte = data[i];
 
-    // 将三进制字符串的每一位映射为对应的"哈基米"字符
-    for (let j = 0; j < ternaryStr.length; j++) {
-      const digit = parseInt(ternaryStr[j], 3);
+    // 转换为八进制
+    const octalDigits: number[] = [];
+    let value = byte;
+
+    do {
+      octalDigits.push(value % 8);
+      value = Math.floor(value / 8);
+    } while (value > 0);
+
+    // 确保至少有3位（三个八进制位可以表示0-511，足够表示一个字节0-255）
+    while (octalDigits.length < 3) {
+      octalDigits.push(0);
+    }
+
+    // 翻转数组（低位->高位）
+    octalDigits.reverse();
+
+    // 将八进制数映射到扩展的"哈基米汪人胖宝牢"字符
+    for (const digit of octalDigits) {
       resultArray.push(HAJIMI_CHARS[digit]);
     }
   }

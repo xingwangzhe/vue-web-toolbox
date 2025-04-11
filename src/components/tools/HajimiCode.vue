@@ -4,7 +4,7 @@
       <div class="bg-neutral-700 p-4 rounded-lg shadow border-2 border-indigo-700">
         <div class="text-center mb-4">
           <h2 class="text-blue-400 text-xl font-medium">哈基米编码转换工具</h2>
-          <p class="text-gray-300 text-sm">将二进制数据通过"哈基米"三个汉字进行编码和解码</p>
+          <p class="text-gray-300 text-sm">将二进制数据通过"哈基米汪人胖宝牢"八个汉字进行高效编码和解码</p>
         </div>
 
         <!-- 主选项卡 -->
@@ -86,17 +86,24 @@
                 class="px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm">下载结果</button>
             </div>
           </div>
+
+          <!-- 编码说明 -->
+          <div class="mt-4 text-sm text-gray-300 bg-neutral-800 p-3 rounded-md">
+            <p class="font-medium text-blue-300">编码说明：</p>
+            <p>本工具使用八进制编码，用八个汉字"哈基米汪人胖宝牢"分别表示0-7，每个字节使用3个字符表示。</p>
+            <p class="mt-1">相比原始的三进制编码，这种方式能减少约40%的编码长度，提高传输和存储效率。</p>
+          </div>
         </div>
 
         <!-- 解码部分 -->
         <div v-else class="space-y-4">
           <div class="font-medium text-blue-400 mb-2 text-lg">输入哈基米编码：</div>
-          <textarea v-model="encodedInput" placeholder="输入哈基米编码（仅包含'哈'、'基'、'米'三个汉字）" rows="6"
+          <textarea v-model="encodedInput" placeholder="输入哈基米编码（仅包含'哈基米汪人胖宝牢'八个汉字）" rows="6"
             class="w-full h-32 p-2 border border-indigo-700 rounded-md bg-neutral-600 text-blue-300"></textarea>
 
           <!-- 验证提示 -->
           <div v-if="encodedInput && !isValidInput" class="text-red-400 text-sm">
-            无效的哈基米编码，请确保只包含"哈"、"基"、"米"三个汉字，且长度为3的倍数
+            无效的哈基米编码，请确保只包含"哈基米汪人胖宝牢"八个汉字，且长度为3的倍数
           </div>
 
           <div class="flex border-b border-gray-600 mb-4">
@@ -146,6 +153,13 @@
           <!-- 二进制数据警告 -->
           <div v-if="showBinaryWarning" class="text-yellow-400 text-sm mt-2">
             解码结果包含二进制数据，已自动切换到文件输出模式。
+          </div>
+
+          <!-- 解码说明 -->
+          <div class="mt-4 text-sm text-gray-300 bg-neutral-800 p-3 rounded-md">
+            <p class="font-medium text-blue-300">解码说明：</p>
+            <p>本工具支持解码使用"哈基米汪人胖宝牢"八个汉字的八进制编码。</p>
+            <p class="mt-1">每3个字符表示一个字节，字符与数字的对应关系为：哈=0，基=1，米=2，汪=3，人=4，胖=5，宝=6，牢=7</p>
           </div>
         </div>
       </div>

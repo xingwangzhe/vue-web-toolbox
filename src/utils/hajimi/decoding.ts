@@ -1,14 +1,19 @@
 /**
  * 哈基米编码 - 解码工具
  * 将哈基米编码转换回原始二进制数据
- * 统一使用UTF-8编码
+ * 统一使用UTF-8编码，支持扩展的八进制编码
  */
 
-// 解码映射表
+// 扩展解码映射表
 const HAJIMI_MAP: Record<string, number> = {
   '哈': 0,
   '基': 1,
-  '米': 2
+  '米': 2,
+  '汪': 3,
+  '人': 4,
+  '胖': 5,
+  '宝': 6,
+  '牢': 7
 };
 
 /**
@@ -17,13 +22,13 @@ const HAJIMI_MAP: Record<string, number> = {
  * @returns 是否是有效的哈基米编码
  */
 export function isValidHajimiCode(encoded: string): boolean {
-  // 长度必须是8的倍数
-  if (encoded.length % 8 !== 0) {
+  // 长度必须是3的倍数（八进制编码中，每个字节需要3个字符表示）
+  if (encoded.length % 3 !== 0) {
     return false;
   }
 
-  // 使用正则表达式一次性检查是否只包含"哈"、"基"、"米"三个字符
-  return /^[哈基米]+$/.test(encoded);
+  // 使用正则表达式一次性检查是否只包含扩展的"哈基米汪人胖宝牢"八个字符
+  return /^[哈基米汪人胖宝牢]+$/.test(encoded);
 }
 
 /**
@@ -37,23 +42,27 @@ export function decodeFromHajimi(encoded: string): Uint8Array {
   }
 
   // 计算需要多少字节来存储结果
-  const byteCount = Math.floor(encoded.length / 8);
+  const byteCount = Math.floor(encoded.length / 3);
   const result = new Uint8Array(byteCount);
 
-  // 每8个哈基米字符对应一个字节
+  // 每3个哈基米字符对应一个字节
   for (let i = 0; i < byteCount; i++) {
-    // 获取当前字节对应的8个哈基米字符
-    const startIdx = i * 8;
-    const part = encoded.substring(startIdx, startIdx + 8);
+    // 获取当前字节对应的3个哈基米字符
+    const startIdx = i * 3;
+    const part = encoded.substring(startIdx, startIdx + 3);
 
-    // 转换为三进制字符串
-    let ternaryStr = '';
+    // 转换为八进制字符串
+    let octalStr = '';
     for (let j = 0; j < part.length; j++) {
-      ternaryStr += HAJIMI_MAP[part[j]];
+      const char = part[j];
+      if (HAJIMI_MAP[char] === undefined) {
+        throw new Error(`无效的哈基米字符: ${char}`);
+      }
+      octalStr += HAJIMI_MAP[char];
     }
 
-    // 将三进制字符串转换为十进制数值
-    result[i] = parseInt(ternaryStr, 3);
+    // 将八进制字符串转换为十进制数值
+    result[i] = parseInt(octalStr, 8);
   }
 
   return result;
