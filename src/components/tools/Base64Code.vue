@@ -41,7 +41,7 @@
             <div class="font-medium text-blue-400 mb-2 text-lg">输入文本：</div>
             <textarea v-model="encodeText" placeholder="输入文本，将转换为 Base64 编码"
               class="w-full h-32 p-2 border border-indigo-700 rounded-md bg-neutral-600 text-blue-300"
-              @input="textToBase64"></textarea>
+              @input="handleTextInput"></textarea>
           </div>
 
           <!-- 文件上传 -->
@@ -80,7 +80,7 @@
           <div v-if="encodeResult" class="mt-4">
             <div class="font-medium text-blue-400 mb-2 text-lg">Base64 编码结果：</div>
             <div class="flex space-x-2 mb-2">
-              <button @click="copyToClipboard(encodeResult)"
+              <button @click="handleCopyEncodeResult"
                 class="px-4 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm">
                 复制
               </button>
@@ -100,18 +100,18 @@
 
           <!-- 解码选项，决定如何处理解码后的数据 -->
           <div class="flex flex-wrap gap-2 mb-2" v-if="decodeInput.trim()">
-            <button @click="base64ToData('auto')"
+            <button @click="handleDecode('auto')"
               class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md">
               自动检测并解码
             </button>
-            <button @click="base64ToData('text')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">
+            <button @click="handleDecode('text')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">
               作为文本解码
             </button>
-            <button @click="base64ToData('image')"
+            <button @click="handleDecode('image')"
               class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md">
               作为图片解码
             </button>
-            <button @click="base64ToData('file')"
+            <button @click="handleDecode('file')"
               class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md">
               作为文件解码
             </button>
@@ -121,7 +121,7 @@
           <div v-if="decodedText" class="mt-4">
             <div class="font-medium text-blue-400 mb-2 text-lg">解码结果（文本）：</div>
             <div class="flex space-x-2 mb-2">
-              <button @click="copyToClipboard(decodedText)"
+              <button @click="handleCopyDecodedText"
                 class="px-4 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm">
                 复制文本
               </button>
@@ -159,11 +159,21 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue';
+import { ref, watch } from 'vue';
+import {
+  textToBase64,
+  arrayBufferToBase64,
+  base64ToData,
+  getFileExtensionFromMimeType,
+  copyToClipboard
+} from '../../utils/base64';
 
 // 选项卡和输入类型控制
 const activeTab = ref('encode');
 const encodeInputType = ref('text');
+
+// 处理状态变量
+//const isProcessingFile = ref(false);
 
 // 编码相关
 const encodeText = ref('');
@@ -185,20 +195,12 @@ const decodeError = ref('');
 // 通用
 const copyMessage = ref('');
 
-// 文本转Base64
-function textToBase64() {
-  try {
-    if (encodeText.value.trim() !== '') {
-      encodeResult.value = btoa(encodeURIComponent(encodeText.value).replace(/%([0-9A-F]{2})/g,
-        function (match, p1) {
-          return String.fromCharCode(parseInt(p1, 16));
-        }
-      ));
-    } else {
-      encodeResult.value = '';
-    }
-  } catch {
-    encodeResult.value = 'Base64编码错误';
+// 处理文本输入
+function handleTextInput() {
+  if (encodeText.value.trim() !== '') {
+    encodeResult.value = textToBase64(encodeText.value);
+  } else {
+    encodeResult.value = '';
   }
 }
 
@@ -218,17 +220,17 @@ function handleFileUpload(event: Event) {
 }
 
 // 处理文件拖拽进入
-function handleDragEnter(e: DragEvent) {
+function handleDragEnter() {
   isDragging.value = true;
 }
 
 // 处理文件拖拽悬停
-function handleDragOver(e: DragEvent) {
+function handleDragOver() {
   isDragging.value = true;
 }
 
 // 处理文件拖拽离开
-function handleDragLeave(e: DragEvent) {
+function handleDragLeave() {
   isDragging.value = false;
 }
 
@@ -267,26 +269,26 @@ function processFile(file: File) {
   reader.onload = (e) => {
     if (e.target?.result) {
       fileContent.value = e.target.result as ArrayBuffer;
-      fileToBase64(fileContent.value);
+      encodeResult.value = arrayBufferToBase64(fileContent.value);
     }
   };
   reader.readAsArrayBuffer(file);
 }
 
-// 文件内容转Base64
-function fileToBase64(buffer: ArrayBuffer) {
-  try {
-    // 转换ArrayBuffer到Base64
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    encodeResult.value = btoa(binary);
-  } catch (error) {
-    console.error('转换文件到Base64出错:', error);
-    encodeResult.value = '文件转Base64失败';
-  }
+// 复制编码结果到剪贴板
+async function handleCopyEncodeResult() {
+  copyMessage.value = await copyToClipboard(encodeResult.value);
+  setTimeout(() => {
+    copyMessage.value = '';
+  }, 2000);
+}
+
+// 复制解码文本到剪贴板
+async function handleCopyDecodedText() {
+  copyMessage.value = await copyToClipboard(decodedText.value);
+  setTimeout(() => {
+    copyMessage.value = '';
+  }, 2000);
 }
 
 // 检测Base64字符串可能的类型
@@ -297,8 +299,8 @@ function detectBase64Type() {
   }
 
   try {
-    // 尝试作为文本解析
-    base64ToData('auto', true); // 只检测类型，不显示结果
+    // 尝试作为文本解析，只检测类型，不显示结果
+    handleDecode('auto', true);
   } catch {
     // 解析失败不显示错误
     resetDecodeState();
@@ -313,448 +315,22 @@ function resetDecodeState() {
   decodeError.value = '';
 }
 
-// Base64转数据
-function base64ToData(outputType: 'auto' | 'text' | 'image' | 'file', detectOnly = false) {
+// 处理解码
+function handleDecode(outputType: 'auto' | 'text' | 'image' | 'file', detectOnly = false) {
   resetDecodeState();
 
-  try {
-    if (!decodeInput.value.trim()) {
-      return;
-    }
+  const result = base64ToData(decodeInput.value, outputType, detectOnly);
 
-    // 清理Base64字符串
-    const cleanBase64 = decodeInput.value.replace(/[\n\r\s]/g, '');
-
-    // 尝试解码Base64
-    let binary: string;
-    try {
-      binary = atob(cleanBase64);
-    } catch (e) {
-      decodeError.value = '无效的Base64编码';
-      return;
-    }
-
-    // 检测前几个字节判断可能的文件类型
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-
-    // 检测MIME类型
-    detectMimeType.value = detectMimeTypeFromBytes(bytes);
-
-    if (detectOnly) {
-      return;
-    }
-
-    // 根据输出类型处理
-    if (outputType === 'auto') {
-      if (isTextLike(bytes)) {
-        outputType = 'text';
-      } else {
-        outputType = 'file';
-      }
-    }
-
-    if (outputType === 'text') {
-      // 尝试作为UTF-8文本解析
-      try {
-        decodedText.value = decodeURIComponent(Array.prototype.map.call(binary, function (c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-      } catch {
-        // 如果上面的方法失败，可能不是UTF-8编码，直接显示
-        decodedText.value = binary;
-      }
-    } else {
-      // 作为文件或图片处理
-      const mimeType = detectMimeType.value || 'application/octet-stream';
-      const blob = new Blob([bytes], { type: mimeType });
-      decodedDataUrl.value = URL.createObjectURL(blob);
-
-      if (outputType === 'image' && !detectMimeType.value.startsWith('image/')) {
-        decodeError.value = '警告：这可能不是图片数据';
-      }
-    }
-  } catch (error) {
-    console.error('Base64解码错误:', error);
-    decodeError.value = '解码过程中发生错误';
-  }
+  // 更新状态
+  decodedText.value = result.decodedText;
+  decodedDataUrl.value = result.decodedDataUrl;
+  detectMimeType.value = result.detectMimeType;
+  decodeError.value = result.decodeError;
 }
 
-// 从字节数组中检测可能的MIME类型
-function detectMimeTypeFromBytes(bytes: Uint8Array): string {
-  // 文件签名(Magic Numbers)检测
-  // 图片格式
-  if (bytes.length >= 4 && bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
-    return 'image/jpeg';
-  }
-  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47
-    && bytes[4] === 0x0D && bytes[5] === 0x0A && bytes[6] === 0x1A && bytes[7] === 0x0A) {
-    return 'image/png';
-  }
-  if (bytes.length >= 6 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38
-    && (bytes[4] === 0x37 || bytes[4] === 0x39) && bytes[5] === 0x61) {
-    return 'image/gif';
-  }
-  if (bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
-    && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
-    return 'image/webp';
-  }
-  if (bytes.length >= 4 && bytes[0] === 0x42 && bytes[1] === 0x4D) {
-    return 'image/bmp';
-  }
-  if ((bytes.length >= 4 && bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2A && bytes[3] === 0x00) ||
-    (bytes.length >= 4 && bytes[0] === 0x4D && bytes[1] === 0x4D && bytes[2] === 0x00 && bytes[3] === 0x2A)) {
-    return 'image/tiff';
-  }
-  if (bytes.length >= 4 && bytes[0] === 0x00 && bytes[1] === 0x00 && bytes[2] === 0x01 && bytes[3] === 0x00) {
-    return 'image/x-icon';
-  }
-
-  // 文档格式
-  if (bytes.length >= 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
-    return 'application/pdf';
-  }
-  // MS Office文档
-  if (bytes.length >= 8 &&
-    bytes[0] === 0xD0 && bytes[1] === 0xCF && bytes[2] === 0x11 && bytes[3] === 0xE0 &&
-    bytes[4] === 0xA1 && bytes[5] === 0xB1 && bytes[6] === 0x1A && bytes[7] === 0xE1) {
-    // 这是OLE格式，包括旧版本的Word/Excel/PowerPoint
-    return 'application/msword'; // 简单起见返回msword，实际上还需进一步分析
-  }
-  // 新版Office文档(docx, xlsx, pptx等)基于ZIP格式，会被下面的ZIP检测识别
-
-  // 压缩文件格式
-  if (bytes.length >= 4 &&
-    ((bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x03 && bytes[3] === 0x04) ||
-      (bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x05 && bytes[3] === 0x06) ||
-      (bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x07 && bytes[3] === 0x08))) {
-    return 'application/zip';
-  }
-  if (bytes.length >= 6 && bytes[0] === 0x52 && bytes[1] === 0x61 && bytes[2] === 0x72 && bytes[3] === 0x21 &&
-    bytes[4] === 0x1A && bytes[5] === 0x07) {
-    return 'application/x-rar-compressed';
-  }
-  if (bytes.length >= 6 && bytes[0] === 0x1F && bytes[1] === 0x8B && bytes[2] === 0x08) {
-    return 'application/gzip';
-  }
-  if (bytes.length >= 2 && bytes[0] === 0x42 && bytes[1] === 0x5A) {
-    return 'application/x-bzip';
-  }
-  if (bytes.length >= 4 && bytes[0] === 0x7F && bytes[1] === 0x45 && bytes[2] === 0x4C && bytes[3] === 0x46) {
-    return 'application/x-elf'; // Linux可执行文件
-  }
-  if (bytes.length >= 2 && bytes[0] === 0x4D && bytes[1] === 0x5A) {
-    return 'application/x-msdownload'; // Windows可执行文件
-  }
-
-  // 音频视频格式
-  if (bytes.length >= 4 && bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) {
-    return 'audio/mp3'; // ID3标记，常见于MP3文件
-  }
-  if (bytes.length >= 12 && bytes[0] === 0x00 && bytes[1] === 0x00 && bytes[2] === 0x00 &&
-    (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70)) {
-    return 'video/mp4'; // MP4文件格式
-  }
-  if (bytes.length >= 4 && bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) {
-    return 'video/webm'; // WebM文件格式
-  }
-  if (bytes.length >= 4 && bytes[0] === 0x4F && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) {
-    return 'application/ogg'; // Ogg容器格式
-  }
-  if (bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
-    bytes[8] === 0x41 && bytes[9] === 0x56 && bytes[10] === 0x49) {
-    return 'video/x-msvideo'; // AVI文件
-  }
-  if (bytes.length >= 8 && bytes[0] === 0x46 && bytes[1] === 0x4C && bytes[2] === 0x56 && bytes[3] === 0x01) {
-    return 'video/x-flv'; // Flash视频
-  }
-
-  // XML检测
-  if (bytes.length >= 5 && bytes[0] === 0x3C && bytes[1] === 0x3F && bytes[2] === 0x78 && bytes[3] === 0x6D && bytes[4] === 0x6C) {
-    return 'application/xml'; // XML文档
-  }
-
-  // JSON检测
-  if (bytes.length >= 2 && ((bytes[0] === 0x7B && findClosingBrace(bytes)) || (bytes[0] === 0x5B && findClosingBracket(bytes)))) {
-    return 'application/json'; // JSON文档
-  }
-
-  // HTML检测
-  if (bytes.length >= 15) {
-    const htmlPrefix = bytesToString(bytes.slice(0, 15)).toLowerCase();
-    if (htmlPrefix.includes("<!doctype html") || htmlPrefix.includes("<html")) {
-      return 'text/html';
-    }
-  }
-
-  // CSS检测
-  if (bytes.length >= 10 && containsCommonCSSRules(bytes)) {
-    return 'text/css';
-  }
-
-  // JavaScript检测
-  if (bytes.length >= 20 && containsJavaScriptPatterns(bytes)) {
-    return 'application/javascript';
-  }
-
-  // 检查UTF-8 BOM
-  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
-    return 'text/plain; charset=utf-8';
-  }
-
-  // 检查UTF-16 BOM
-  if (bytes.length >= 2 &&
-    ((bytes[0] === 0xFE && bytes[1] === 0xFF) || (bytes[0] === 0xFF && bytes[1] === 0xFE))) {
-    return 'text/plain; charset=utf-16';
-  }
-
-  // 如果无法检测，根据内容粗略判断是否可能是文本
-  if (isTextLike(bytes)) {
-    return 'text/plain';
-  }
-
-  return 'application/octet-stream'; // 默认二进制类型
-}
-
-// 将字节数组转换成字符串，用于文本内容检测
-function bytesToString(bytes: Uint8Array): string {
-  let result = '';
-  for (let i = 0; i < bytes.length; i++) {
-    const byte = bytes[i];
-    // 只转换ASCII可打印字符和常见控制字符
-    if ((byte >= 32 && byte <= 126) || byte === 9 || byte === 10 || byte === 13) {
-      result += String.fromCharCode(byte);
-    } else {
-      result += ' '; // 用空格替代不可打印字符
-    }
-  }
-  return result;
-}
-
-// 检查是否包含常见CSS规则
-function containsCommonCSSRules(bytes: Uint8Array): boolean {
-  const content = bytesToString(bytes.slice(0, 100)).toLowerCase();
-  return content.includes('{') &&
-    (content.includes('margin') || content.includes('padding') ||
-      content.includes('font') || content.includes('color') ||
-      content.includes('background') || content.includes('display'));
-}
-
-// 检查是否包含JavaScript常见模式
-function containsJavaScriptPatterns(bytes: Uint8Array): boolean {
-  const content = bytesToString(bytes.slice(0, 150)).toLowerCase();
-  return (content.includes('function') && content.includes('{')) ||
-    content.includes('var ') || content.includes('let ') ||
-    content.includes('const ') ||
-    (content.includes('=') && content.includes(';')) ||
-    content.includes('export ') || content.includes('import ');
-}
-
-// 检查JSON格式：查找匹配的闭合花括号
-function findClosingBrace(bytes: Uint8Array): boolean {
-  // 简化实现，仅检查前100字节中是否有闭合花括号
-  return bytesToString(bytes.slice(0, 100)).includes('}');
-}
-
-// 检查JSON数组格式：查找匹配的闭合方括号
-function findClosingBracket(bytes: Uint8Array): boolean {
-  // 简化实现，仅检查前100字节中是否有闭合方括号
-  return bytesToString(bytes.slice(0, 100)).includes(']');
-}
-
-// 根据字节内容判断是否可能为文本
-function isTextLike(bytes: Uint8Array): boolean {
-  // 检查是否含有BOM标记
-  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
-    return true; // UTF-8 BOM
-  }
-  if (bytes.length >= 2 &&
-    ((bytes[0] === 0xFE && bytes[1] === 0xFF) || (bytes[0] === 0xFF && bytes[1] === 0xFE))) {
-    return true; // UTF-16 BOM
-  }
-
-  // 检测是否为有效的UTF-8编码
-  if (isValidUTF8(bytes)) {
-    return true;
-  }
-
-  // 检查统计特征
-  const checkLength = Math.min(500, bytes.length); // 增加检查长度以提高准确性
-  let textCharCount = 0;
-  let controlCharCount = 0;
-  let binaryCharCount = 0;
-  let nullByteCount = 0;
-
-  // 统计不同类型字符的数量
-  for (let i = 0; i < checkLength; i++) {
-    const byte = bytes[i];
-    // ASCII 可见字符
-    if (byte >= 32 && byte <= 126) {
-      textCharCount++;
-    }
-    // 常见控制字符 (tab, LF, CR, etc)
-    else if (byte === 9 || byte === 10 || byte === 13) {
-      controlCharCount++;
-    }
-    // 空字节
-    else if (byte === 0) {
-      nullByteCount++;
-    }
-    // 其他非文本字节
-    else if (byte < 9 || (byte > 13 && byte < 32) || byte > 126) {
-      binaryCharCount++;
-    }
-  }
-
-  // 文本特征判断条件
-  // 1. 至少有30%是可见字符
-  const textRatio = textCharCount / checkLength;
-  // 2. 二进制字符比例不应太高
-  const binaryRatio = binaryCharCount / checkLength;
-  // 3. 空字节比例不应太高(可能是二进制文件)
-  const nullRatio = nullByteCount / checkLength;
-
-  // 判断为文本的条件组合
-  return (textRatio > 0.3) && (binaryRatio < 0.3) && (nullRatio < 0.2);
-}
-
-// 检查是否是有效的UTF-8编码
-function isValidUTF8(bytes: Uint8Array): boolean {
-  // 简单的UTF-8验证：检查多字节字符结构是否符合UTF-8编码规则
-  let i = 0;
-  const len = Math.min(bytes.length, 500); // 限制检查长度
-  let validSequences = 0;
-  let invalidSequences = 0;
-
-  while (i < len) {
-    // 单字节ASCII (0xxxxxxx)
-    if ((bytes[i] & 0x80) === 0) {
-      i += 1;
-    }
-    // 2字节序列 (110xxxxx 10xxxxxx)
-    else if ((bytes[i] & 0xE0) === 0xC0) {
-      if (i + 1 < len && (bytes[i + 1] & 0xC0) === 0x80) {
-        validSequences++;
-        i += 2;
-      } else {
-        invalidSequences++;
-        i += 1;
-      }
-    }
-    // 3字节序列 (1110xxxx 10xxxxxx 10xxxxxx)
-    else if ((bytes[i] & 0xF0) === 0xE0) {
-      if (i + 2 < len && (bytes[i + 1] & 0xC0) === 0x80 && (bytes[i + 2] & 0xC0) === 0x80) {
-        validSequences++;
-        i += 3;
-      } else {
-        invalidSequences++;
-        i += 1;
-      }
-    }
-    // 4字节序列 (11110xxx 10xxxxxx 10xxxxxx 10xxxxxx)
-    else if ((bytes[i] & 0xF8) === 0xF0) {
-      if (i + 3 < len && (bytes[i + 1] & 0xC0) === 0x80 &&
-        (bytes[i + 2] & 0xC0) === 0x80 && (bytes[i + 3] & 0xC0) === 0x80) {
-        validSequences++;
-        i += 4;
-      } else {
-        invalidSequences++;
-        i += 1;
-      }
-    } else {
-      // 无效的UTF-8起始字节
-      invalidSequences++;
-      i += 1;
-    }
-  }
-
-  // 如果有足够多的有效多字节序列，且无效序列比例低，认为是UTF-8
-  return validSequences > 0 && (invalidSequences / (validSequences + invalidSequences)) < 0.2;
-}
-
-// 根据MIME类型获取文件扩展名
+// 获取文件扩展名
 function getFileExtension(): string {
-  const mimeToExt: Record<string, string> = {
-    // 图片格式
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/gif': 'gif',
-    'image/webp': 'webp',
-    'image/bmp': 'bmp',
-    'image/tiff': 'tiff',
-    'image/x-icon': 'ico',
-    'image/svg+xml': 'svg',
-
-    // 文档格式
-    'application/pdf': 'pdf',
-    'application/msword': 'doc',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-    'application/vnd.ms-excel': 'xls',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
-    'application/vnd.ms-powerpoint': 'ppt',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
-
-    // 压缩文件
-    'application/zip': 'zip',
-    'application/x-rar-compressed': 'rar',
-    'application/gzip': 'gz',
-    'application/x-bzip': 'bz2',
-    'application/x-7z-compressed': '7z',
-    'application/x-tar': 'tar',
-
-    // 可执行文件
-    'application/x-msdownload': 'exe',
-    'application/x-elf': 'elf',
-
-    // 音频视频
-    'audio/mp3': 'mp3',
-    'audio/mpeg': 'mp3',
-    'audio/wav': 'wav',
-    'audio/ogg': 'ogg',
-    'video/mp4': 'mp4',
-    'video/webm': 'webm',
-    'application/ogg': 'ogg',
-    'video/x-msvideo': 'avi',
-    'video/x-flv': 'flv',
-    'video/quicktime': 'mov',
-
-    // 文本和编程语言
-    'text/plain': 'txt',
-    'text/html': 'html',
-    'text/css': 'css',
-    'application/javascript': 'js',
-    'application/json': 'json',
-    'application/xml': 'xml',
-    'text/csv': 'csv',
-    'text/markdown': 'md',
-
-    // 字体
-    'font/ttf': 'ttf',
-    'font/otf': 'otf',
-    'font/woff': 'woff',
-    'font/woff2': 'woff2'
-  };
-
-  // 检查MIME类型是否包含编码信息（例如 text/plain; charset=utf-8）
-  const mimeBase = detectMimeType.value.split(';')[0].trim();
-
-  // 尝试从映射表中获取扩展名，如果不存在则使用默认值
-  return mimeToExt[mimeBase] || (mimeBase.startsWith('text/') ? 'txt' : 'bin');
-}
-
-// 复制到剪贴板
-function copyToClipboard(text: string) {
-  navigator.clipboard.writeText(text).then(() => {
-    copyMessage.value = '已复制到剪贴板！';
-    setTimeout(() => {
-      copyMessage.value = '';
-    }, 2000);
-  }).catch(err => {
-    console.error('复制失败:', err);
-    copyMessage.value = '复制失败，请手动复制';
-  });
+  return getFileExtensionFromMimeType(detectMimeType.value);
 }
 
 // 监听选项卡切换，重置相关状态
