@@ -55,6 +55,19 @@
               <span v-if="fileInfo" class="text-blue-300">{{ fileInfo }}</span>
             </div>
 
+            <!-- 拖拽上传区域 -->
+            <div class="mt-4 border-2 border-dashed rounded-md p-8 text-center transition-colors"
+              :class="[isDragging ? 'border-blue-400 bg-blue-900/20' : 'border-indigo-700']"
+              @dragenter.prevent="handleDragEnter" @dragover.prevent="handleDragOver"
+              @dragleave.prevent="handleDragLeave" @drop.prevent="handleDrop">
+              <div class="flex flex-col items-center justify-center space-y-2">
+                <font-awesome-icon icon="cloud-upload-alt" class="text-blue-400 text-3xl" />
+                <p class="text-blue-300">将文件拖放到此处或<button @click="triggerFileInput"
+                    class="text-blue-400 underline">点击上传</button></p>
+                <input type="file" ref="hiddenFileInput" @change="handleFileUpload" class="hidden" />
+              </div>
+            </div>
+
             <!-- 图片预览 -->
             <div v-if="fileType.startsWith('image/') && filePreview"
               class="mt-4 border-2 border-dashed border-indigo-700 p-2 rounded-md">
@@ -159,6 +172,8 @@ const fileInfo = ref('');
 const fileType = ref('');
 const filePreview = ref('');
 const fileContent = ref<ArrayBuffer | null>(null);
+const isDragging = ref(false);
+const hiddenFileInput = ref<HTMLInputElement | null>(null);
 
 // 解码相关
 const decodeInput = ref('');
@@ -187,42 +202,75 @@ function textToBase64() {
   }
 }
 
+// 触发隐藏的文件上传输入
+function triggerFileInput() {
+  if (hiddenFileInput.value) {
+    hiddenFileInput.value.click();
+  }
+}
+
 // 处理文件上传
 function handleFileUpload(event: Event) {
   const input = event.target as HTMLInputElement;
   if (input.files && input.files[0]) {
-    const file = input.files[0];
+    processFile(input.files[0]);
+  }
+}
 
-    // 显示文件信息
-    const sizeInKB = Math.round(file.size / 1024);
-    fileInfo.value = `${file.name} (${sizeInKB} KB)`;
-    fileType.value = file.type;
+// 处理文件拖拽进入
+function handleDragEnter(e: DragEvent) {
+  isDragging.value = true;
+}
 
-    // 读取文件内容
-    const reader = new FileReader();
+// 处理文件拖拽悬停
+function handleDragOver(e: DragEvent) {
+  isDragging.value = true;
+}
 
-    // 如果是图片则预览
-    if (file.type.startsWith('image/')) {
-      const imageReader = new FileReader();
-      imageReader.onload = (e) => {
-        if (e.target?.result) {
-          filePreview.value = e.target.result as string;
-        }
-      };
-      imageReader.readAsDataURL(file);
-    } else {
-      filePreview.value = '';
-    }
+// 处理文件拖拽离开
+function handleDragLeave(e: DragEvent) {
+  isDragging.value = false;
+}
 
-    // 读取为二进制，转换为Base64
-    reader.onload = (e) => {
+// 处理文件拖放
+function handleDrop(e: DragEvent) {
+  isDragging.value = false;
+  if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+    processFile(e.dataTransfer.files[0]);
+  }
+}
+
+// 统一处理文件逻辑
+function processFile(file: File) {
+  // 显示文件信息
+  const sizeInKB = Math.round(file.size / 1024);
+  fileInfo.value = `${file.name} (${sizeInKB} KB)`;
+  fileType.value = file.type;
+
+  // 读取文件内容
+  const reader = new FileReader();
+
+  // 如果是图片则预览
+  if (file.type.startsWith('image/')) {
+    const imageReader = new FileReader();
+    imageReader.onload = (e) => {
       if (e.target?.result) {
-        fileContent.value = e.target.result as ArrayBuffer;
-        fileToBase64(fileContent.value);
+        filePreview.value = e.target.result as string;
       }
     };
-    reader.readAsArrayBuffer(file);
+    imageReader.readAsDataURL(file);
+  } else {
+    filePreview.value = '';
   }
+
+  // 读取为二进制，转换为Base64
+  reader.onload = (e) => {
+    if (e.target?.result) {
+      fileContent.value = e.target.result as ArrayBuffer;
+      fileToBase64(fileContent.value);
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 // 文件内容转Base64
@@ -432,4 +480,7 @@ watch(encodeInputType, () => {
 
 <style>
 /* 可能需要的自定义样式 */
+.hidden {
+  display: none;
+}
 </style>
