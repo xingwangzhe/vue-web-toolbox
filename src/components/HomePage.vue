@@ -18,10 +18,9 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { tools_information } from '@/router/config';
-import { icon } from '@fortawesome/fontawesome-svg-core';
 const router = useRouter();
 
 const tools = computed(() => {
